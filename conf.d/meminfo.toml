@@ -1,0 +1,36 @@
+[hekad]
+maxprocs = 1
+
+[meminfo]
+type = "FilePollingInput"
+ticker_interval = 5
+file_path = "/proc/meminfo"
+decoder = "MemInfoDecoder"
+
+[MemInfoDecoder]
+type = "SandboxDecoder"
+filename = "lua_decoders/linux_memstats.lua"
+
+[MemInfoFilter]
+type = "SandboxFilter"
+message_matcher = "Type == 'heka.memstat'"
+filename = "lua_filters/heka_memstat.lua"
+ticker_interval = 5
+preserve_data = true
+    [MemInfoFilter.config]
+    rows = 1440
+    sec_per_row = 5
+
+[MemInfoInfluxDBEncoder]
+type = "SandboxEncoder"
+filename = "lua_encoders/schema_influx_line.lua"
+    [MemInfoInfluxDBEncoder.config]
+    timestamp_precision= "s"
+
+[MemInfoInfluxDBOutput]
+type = "HttpOutput"
+message_matcher = "Type == 'stats.memstats'"
+address = "http://127.0.0.1:8086/write?db=meminfo&rp=default&precision=s"
+username = "root"
+password = "root"
+encoder = "MemInfoInfluxDBEncoder"

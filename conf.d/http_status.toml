@@ -1,0 +1,49 @@
+[hekad]
+maxprocs = 1
+
+#Apache
+#Make sure the heka user has access to Apache2 log files by adding the user to the Apache2 default group
+[Apache2AccessLogInput]
+type = "LogstreamerInput"
+log_directory = "/var/log/apache2"
+file_match = 'access\.log'
+ticker_interval = 5
+decoder = "Apache2LogDecoder"
+
+[Apache2LogDecoder]
+type = "SandboxDecoder"
+filename = "lua_decoders/apache_access.lua"
+    [Apache2LogDecoder.config]
+    user_agent_transform = false
+    log_format = "%h %l %u %t \"%r\" %>s %O \"%{Referer}i\" \"%{User-Agent}i\""
+
+[Apache2HTTPStatusFilter]
+type = "SandboxFilter"
+filename = "lua_filters/http_status.lua"
+ticker_interval = 5
+preserve_data = false
+message_matcher = "Type == 'logfile'"
+    [Apache2HTTPStatusFilter.config]
+    sec_per_row = 60
+    rows = 1440
+    preservation_version = 14
+
+
+[Apache2HTTPStatusInfluxDBEncoder]
+type = "SandboxEncoder"
+filename = "lua_encoders/schema_influx_line.lua"
+    [Apache2HTTPStatusInfluxDBEncoder.config]
+    timestamp_precision= "s"
+
+[Apache2HTTPStatusInfluxDBOutput]
+type = "HttpOutput"
+message_matcher = "Type == 'logfile'"
+address = "http://127.0.0.1:8086/write?db=a2_access_log&rp=default&precision=s"
+username = "root"
+password = "root"
+encoder = "Apache2HTTPStatusInfluxDBEncoder"
+ 
+
+[LogOutput]
+message_matcher = "Type == 'logfile'"
+encoder = "Apache2HTTPStatusInfluxDBEncoder"

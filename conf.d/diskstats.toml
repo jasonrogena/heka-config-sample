@@ -1,0 +1,37 @@
+[hekad]
+maxprocs = 1
+
+[DiskStats]
+type = "FilePollingInput"
+ticker_interval = 5
+file_path = "/sys/block/sda/stat"
+decoder = "DiskStatsDecoder"
+
+[DiskStatsDecoder]
+type = "SandboxDecoder"
+filename = "lua_decoders/linux_diskstats.lua"
+
+[DiskStatsFilter]
+type = "SandboxFilter"
+filename = "lua_filters/diskstats.lua"
+preserve_data = true
+message_matcher = "Type == 'stats.diskstats'"
+ticker_interval = 5
+
+[DiskStatsInfluxDBEncoder]
+type = "SandboxEncoder"
+filename = "lua_encoders/schema_influx_line.lua"
+    [DiskStatsInfluxDBEncoder.config]
+    timestamp_precision= "s"
+
+[DiskStatsInfluxDBOutput]
+type = "HttpOutput"
+message_matcher = "Type == 'stats.diskstats'"
+address = "http://127.0.0.1:8086/write?db=disk_stats&rp=default&precision=s"
+username = "root"
+password = "root"
+encoder = "DiskStatsInfluxDBEncoder"
+
+#[LogOutput]
+#message_matcher = "TRUE"
+#encoder = "DiskStatsInfluxDBEncoder"

@@ -1,0 +1,39 @@
+[hekad]
+maxprocs = 1
+
+[ProcStatInput]
+type = "FilePollingInput"
+ticker_interval = 5
+file_path = "/proc/stat"
+decoder = "ProcStatDecoder"
+
+[ProcStatDecoder]
+type = "SandboxDecoder"
+filename = "lua_decoders/linux_procstat.lua"
+
+[ProcStatFilter]
+type = "SandboxFilter"
+message_matcher = "Type == 'stats.procstat'"
+filename = "lua_filters/procstat.lua"
+ticker_interval = 5
+preserve_data = false
+    [ProcStatFilter.config]
+    extras = true
+
+[ProcStatInfluxDBEncoder]
+type = "SandboxEncoder"
+filename = "lua_encoders/schema_influx_line.lua"
+    [ProcStatInfluxDBEncoder.config]
+    timestamp_precision= "s"
+
+[ProcStatInfluxDBOutput]
+type = "HttpOutput"
+message_matcher = "Type == 'stats.procstat'"
+address = "http://127.0.0.1:8086/write?db=proc_stat&rp=default&precision=s"
+username = "root"
+password = "root"
+encoder = "ProcStatInfluxDBEncoder"
+
+[LogOutput]
+message_matcher = "Type == 'stats.procstat'"
+encoder = "ProcStatInfluxDBEncoder"
